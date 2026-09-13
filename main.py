@@ -182,3 +182,66 @@ class MotorRecomendacion:
         ]
         puntuados.sort(key=lambda t: t[1], reverse=True)
         return puntuados[:cantidad]
+
+    
+class Restaurante:
+
+    def __init__(self, id_restaurante, nombre, cocina, calificacion, ubicacion, abierto=True):
+        self._id = id_restaurante
+        self._nombre = nombre
+        self._cocina = cocina
+        self._calificacion = calificacion
+        self._ubicacion = ubicacion
+        self._abierto = abierto
+        self._historial_pedidos = []
+
+    def get_id(self):
+        return self._id
+
+    def get_nombre(self):
+        return self._nombre
+
+    def get_cocina(self):
+        return self._cocina
+
+    def get_calificacion(self):
+        return self._calificacion
+
+    def get_ubicacion(self):
+        return self._ubicacion
+
+    def esta_abierto(self):
+        return self._abierto
+
+    def set_abierto(self, valor):
+        self._abierto = valor
+
+    def registrar_pedido(self):
+        self._historial_pedidos.append(datetime.now())
+
+    def pedidos_ultima_hora(self):
+        limite = datetime.now() - timedelta(hours=1)
+        return len([t for t in self._historial_pedidos if t >= limite])
+
+
+class EstimadorEspera:
+
+    UMBRAL_ALTO = 8
+
+    def factor_congestion(self, restaurante):
+        pedidos = restaurante.pedidos_ultima_hora()
+        factor = np.log1p(pedidos) / np.log1p(self.UMBRAL_ALTO)
+        return float(np.clip(factor, 0.0, 1.5))
+
+    def tiempo_estimado(self, plato):
+        factor = self.factor_congestion(plato.get_restaurante())
+        return round(plato.get_tiempo_preparacion() * (1 + factor), 1)
+
+    def estado_congestion(self, restaurante):
+        factor = self.factor_congestion(restaurante)
+        if factor < 0.4:
+            return "bajo"
+        elif factor < 0.8:
+            return "medio"
+        else:
+            return "alto"
