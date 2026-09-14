@@ -476,3 +476,37 @@ class CampusFoodHub:
             "plato_mas_rapido": plato_mas_rapido,
         }
 
+    def crear_preorden(self, estudiante, items, hora_recogida, notas=""):
+        if not items:
+            raise ValueError("La preorden debe incluir al menos un plato")
+
+        seleccion = []
+        for id_plato, cantidad in items:
+            plato = next((p for p in self._platos if p.get_id() == id_plato), None)
+            if plato is None:
+                raise ValueError(f"No existe un plato con id {id_plato}")
+            seleccion.append((plato, cantidad))
+
+        cantidad_por_plato = {}
+        for plato, cantidad in seleccion:
+            cantidad_por_plato[plato] = cantidad_por_plato.get(plato, 0) + cantidad
+        for plato, cantidad_total in cantidad_por_plato.items():
+            if cantidad_total < 1 or cantidad_total > 5:
+                raise ValueError("La cantidad por plato debe estar entre 1 y 5")
+            if cantidad_total > plato.get_inventario():
+                raise ValueError(f"Inventario insuficiente para '{plato.get_nombre()}'")
+
+        if len({p.get_restaurante().get_id() for p, _ in seleccion}) > 1:
+            raise ValueError("Todos los platos de una preorden deben ser del mismo restaurante")
+
+        pedido = Pedido(estudiante, hora_recogida, notas)
+        for plato, cantidad in seleccion:
+            pedido.agregar_item(plato, cantidad)
+            estudiante.actualizar_perfil_segun_eleccion(plato)
+
+        estudiante.registrar_pedido(pedido)
+        self._pedidos.append(pedido)
+        return pedido
+
+    def obtener_combo_optimo(self, presupuesto):
+        return self._optimizador_combos.optimizar(self.obtener_menu_disponible(), presupuesto)
