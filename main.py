@@ -402,3 +402,77 @@ class OptimizadorCombos:
 
         gasto = sum(p.precio_final() for p in elegidos)
         return elegidos, gasto, int(mejor_ahorro[tope])
+
+class CampusFoodHub:
+
+    def __init__(self):
+        self._restaurantes = []
+        self._platos = []
+        self._estudiantes = []
+        self._pedidos = []
+        self._motor_recomendacion = MotorRecomendacion()
+        self._estimador_espera = EstimadorEspera()
+        self._optimizador_combos = OptimizadorCombos()
+
+    def agregar_restaurante(self, restaurante):
+        self._restaurantes.append(restaurante)
+
+    def agregar_plato(self, plato):
+        self._platos.append(plato)
+
+    def agregar_estudiante(self, estudiante):
+        self._estudiantes.append(estudiante)
+
+    def obtener_estudiantes(self):
+        return self._estudiantes
+
+    def obtener_menu_disponible(self):
+        return [
+            p for p in self._platos
+            if p.tiene_stock() and p.get_restaurante().esta_abierto()
+        ]
+    def filtrar_menu(self, texto_busqueda=None, precio_maximo=None,
+                      tiempo_maximo=None, solo_saludable=False, solo_excedente=False):
+        resultado = self.obtener_menu_disponible()
+
+        if texto_busqueda:
+            texto = texto_busqueda.lower().strip()
+            resultado = [
+                p for p in resultado
+                if texto in p.get_nombre().lower()
+                or texto in p.get_restaurante().get_nombre().lower()
+                or texto in p.get_categoria().lower()
+            ]
+        if precio_maximo is not None:
+            resultado = [p for p in resultado if p.precio_final() <= precio_maximo]
+        if tiempo_maximo is not None:
+            resultado = [p for p in resultado if p.get_tiempo_preparacion() <= tiempo_maximo]
+        if solo_saludable:
+            resultado = [p for p in resultado if p.es_saludable()]
+        if solo_excedente:
+            resultado = [p for p in resultado if p.es_excedente()]
+
+        return resultado
+
+    def obtener_recomendaciones(self, estudiante, cantidad=4):
+        return self._motor_recomendacion.recomendar(
+            self.obtener_menu_disponible(), estudiante, cantidad
+        )
+
+    def obtener_ofertas(self):
+        ofertas = [p for p in self.obtener_menu_disponible() if p.es_excedente()]
+        ofertas.sort(key=lambda p: p.get_descuento_excedente(), reverse=True)
+        return ofertas
+
+    def obtener_resumen_campus(self):
+        activos = self.obtener_menu_disponible()
+        restaurantes_abiertos = [r for r in self._restaurantes if r.esta_abierto()]
+        ofertas = [p for p in activos if p.es_excedente()]
+        plato_mas_rapido = min(activos, key=lambda p: p.get_tiempo_preparacion()) if activos else None
+        return {
+            "platos_activos": len(activos),
+            "restaurantes_abiertos": len(restaurantes_abiertos),
+            "ofertas_vigentes": len(ofertas),
+            "plato_mas_rapido": plato_mas_rapido,
+        }
+
