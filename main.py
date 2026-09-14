@@ -245,3 +245,160 @@ class EstimadorEspera:
             return "medio"
         else:
             return "alto"
+
+class Plato:
+    
+    def __init__(self, id_plato, nombre, restaurante, precio, categoria,
+                 calorias, tiempo_preparacion, saludable, inventario,
+                 descuento_excedente=0):
+        self._id = id_plato
+        self._nombre = nombre
+        self._restaurante = restaurante
+        self._precio = precio
+        self._categoria = categoria
+        self._calorias = calorias
+        self._tiempo_preparacion = tiempo_preparacion
+        self._saludable = saludable
+        self._inventario = inventario
+        self._descuento_excedente = descuento_excedente
+    
+    def get_id(self):
+        return self._id
+
+    def get_nombre(self):
+        return self._nombre
+
+    def get_restaurante(self):
+        return self._restaurante
+
+    def get_precio(self):
+        return self._precio
+
+    def get_categoria(self):
+        return self._categoria
+
+    def get_calorias(self):
+        return self._calorias
+
+    def get_tiempo_preparacion(self):
+        return self._tiempo_preparacion
+
+    def es_saludable(self):
+        return self._saludable
+
+    def get_inventario(self):
+        return self._inventario
+
+    def get_descuento_excedente(self):
+        return self._descuento_excedente
+   
+    def precio_final(self):
+        return round(self._precio * (1 - self._descuento_excedente / 100))
+
+    def es_excedente(self):
+        return self._descuento_excedente > 0 and self._inventario > 0
+
+    def reducir_inventario(self, cantidad):
+        if cantidad > self._inventario:
+            raise ValueError(f"Inventario insuficiente para '{self._nombre}'")
+        self._inventario -= cantidad
+
+    def tiene_stock(self):
+        return self._inventario > 0
+
+
+class ItemPedido:
+
+    def __init__(self, plato, cantidad):
+        self._plato = plato
+        self._cantidad = cantidad
+
+    def get_plato(self):
+        return self._plato
+
+    def get_cantidad(self):
+        return self._cantidad
+
+    def subtotal(self):
+        return self._plato.precio_final() * self._cantidad
+
+
+class Pedido:
+
+    _contador_id = 0
+
+    def __init__(self, estudiante, hora_recogida, notas=""):
+        Pedido._contador_id += 1
+        self._id = Pedido._contador_id
+        self._estudiante = estudiante
+        self._items = []
+        self._hora_recogida = hora_recogida
+        self._notas = notas
+        self._estado = "confirmado"
+
+    def get_id(self):
+        return self._id
+
+    def get_estudiante(self):
+        return self._estudiante
+
+    def get_items(self):
+        return self._items
+
+    def get_hora_recogida(self):
+        return self._hora_recogida
+
+    def get_notas(self):
+        return self._notas
+
+    def get_estado(self):
+        return self._estado
+
+    def agregar_item(self, plato, cantidad):
+        if cantidad < 1 or cantidad > 5:
+            raise ValueError("La cantidad por plato debe estar entre 1 y 5")
+        plato.reducir_inventario(cantidad)
+        plato.get_restaurante().registrar_pedido()
+        self._items.append(ItemPedido(plato, cantidad))
+
+    def total(self):
+        return sum(item.subtotal() for item in self._items)
+
+
+class OptimizadorCombos:
+
+    def optimizar(self, lista_platos, presupuesto):
+        candidatos = [p for p in lista_platos if p.es_excedente() and p.tiene_stock()]
+        if not candidatos or presupuesto <= 0:
+            return [], 0, 0
+
+        costos = np.array([p.precio_final() for p in candidatos], dtype=int)
+        ahorros = np.array([p.get_precio() - p.precio_final() for p in candidatos], dtype=int)
+
+        tope = int(min(presupuesto, costos.sum()))
+
+        mejor_ahorro = np.zeros(tope + 1, dtype=int)
+        
+        tomado = np.zeros((len(candidatos), tope + 1), dtype=bool)
+
+        for i in range(len(candidatos)):
+            costo = int(costos[i])
+            if costo > tope:
+                continue
+            
+            con_plato = mejor_ahorro[:tope + 1 - costo] + int(ahorros[i])
+            sin_plato = mejor_ahorro[costo:]
+            mejora = con_plato > sin_plato
+            mejor_ahorro[costo:] = np.where(mejora, con_plato, sin_plato)
+            tomado[i, costo:] = mejora
+
+        elegidos = []
+        capacidad = tope
+        for i in range(len(candidatos) - 1, -1, -1):
+            if tomado[i, capacidad]:
+                elegidos.append(candidatos[i])
+                capacidad -= int(costos[i])
+        elegidos.reverse()
+
+        gasto = sum(p.precio_final() for p in elegidos)
+        return elegidos, gasto, int(mejor_ahorro[tope])
