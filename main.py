@@ -510,3 +510,61 @@ class CampusFoodHub:
 
     def obtener_combo_optimo(self, presupuesto):
         return self._optimizador_combos.optimizar(self.obtener_menu_disponible(), presupuesto)
+
+
+    def filtrar_menu(self, texto_busqueda=None, precio_maximo=None,
+                      tiempo_maximo=None, solo_saludable=False, solo_excedente=False):
+        resultado = self.obtener_menu_disponible()
+
+        if texto_busqueda:
+            texto = texto_busqueda.lower().strip()
+            resultado = [
+                p for p in resultado
+                if texto in p.get_nombre().lower()
+                or texto in p.get_restaurante().get_nombre().lower()
+                or texto in p.get_categoria().lower()
+            ]
+        if precio_maximo is not None:
+            resultado = [p for p in resultado if p.precio_final() <= precio_maximo]
+        if tiempo_maximo is not None:
+            resultado = [p for p in resultado if p.get_tiempo_preparacion() <= tiempo_maximo]
+        if solo_saludable:
+            resultado = [p for p in resultado if p.es_saludable()]
+        if solo_excedente:
+            resultado = [p for p in resultado if p.es_excedente()]
+
+        return resultado
+    
+    def obtener_ofertas(self):
+        ofertas = [p for p in self.obtener_menu_disponible() if p.es_excedente()]
+        ofertas.sort(key=lambda p: p.get_descuento_excedente(), reverse=True)
+        return ofertas
+
+    def obtener_resumen_campus(self):
+        activos = self.obtener_menu_disponible()
+        restaurantes_abiertos = [r for r in self._restaurantes if r.esta_abierto()]
+        ofertas = [p for p in activos if p.es_excedente()]
+        plato_mas_rapido = min(activos, key=lambda p: p.get_tiempo_preparacion()) if activos else None
+        return {
+            "platos_activos": len(activos),
+            "restaurantes_abiertos": len(restaurantes_abiertos),
+            "ofertas_vigentes": len(ofertas),
+            "plato_mas_rapido": plato_mas_rapido,
+        }
+
+    def obtener_estado_restaurantes(self):
+        resultado = []
+        for restaurante in self._restaurantes:
+            if not restaurante.esta_abierto():
+                continue
+            platos_restaurante = [p for p in self._platos if p.get_restaurante() is restaurante]
+            tiempo_prom = (
+                round(sum(self._estimador_espera.tiempo_estimado(p) for p in platos_restaurante) / len(platos_restaurante), 1)
+                if platos_restaurante else 0
+            )
+            resultado.append({
+                "restaurante": restaurante,
+                "congestion": self._estimador_espera.estado_congestion(restaurante),
+                "tiempo_estimado_min": tiempo_prom,
+            })
+        return resultado
