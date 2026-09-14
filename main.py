@@ -431,50 +431,11 @@ class CampusFoodHub:
             p for p in self._platos
             if p.tiene_stock() and p.get_restaurante().esta_abierto()
         ]
-    def filtrar_menu(self, texto_busqueda=None, precio_maximo=None,
-                      tiempo_maximo=None, solo_saludable=False, solo_excedente=False):
-        resultado = self.obtener_menu_disponible()
-
-        if texto_busqueda:
-            texto = texto_busqueda.lower().strip()
-            resultado = [
-                p for p in resultado
-                if texto in p.get_nombre().lower()
-                or texto in p.get_restaurante().get_nombre().lower()
-                or texto in p.get_categoria().lower()
-            ]
-        if precio_maximo is not None:
-            resultado = [p for p in resultado if p.precio_final() <= precio_maximo]
-        if tiempo_maximo is not None:
-            resultado = [p for p in resultado if p.get_tiempo_preparacion() <= tiempo_maximo]
-        if solo_saludable:
-            resultado = [p for p in resultado if p.es_saludable()]
-        if solo_excedente:
-            resultado = [p for p in resultado if p.es_excedente()]
-
-        return resultado
 
     def obtener_recomendaciones(self, estudiante, cantidad=4):
         return self._motor_recomendacion.recomendar(
             self.obtener_menu_disponible(), estudiante, cantidad
         )
-
-    def obtener_ofertas(self):
-        ofertas = [p for p in self.obtener_menu_disponible() if p.es_excedente()]
-        ofertas.sort(key=lambda p: p.get_descuento_excedente(), reverse=True)
-        return ofertas
-
-    def obtener_resumen_campus(self):
-        activos = self.obtener_menu_disponible()
-        restaurantes_abiertos = [r for r in self._restaurantes if r.esta_abierto()]
-        ofertas = [p for p in activos if p.es_excedente()]
-        plato_mas_rapido = min(activos, key=lambda p: p.get_tiempo_preparacion()) if activos else None
-        return {
-            "platos_activos": len(activos),
-            "restaurantes_abiertos": len(restaurantes_abiertos),
-            "ofertas_vigentes": len(ofertas),
-            "plato_mas_rapido": plato_mas_rapido,
-        }
 
     def crear_preorden(self, estudiante, items, hora_recogida, notas=""):
         if not items:
@@ -568,3 +529,296 @@ class CampusFoodHub:
                 "tiempo_estimado_min": tiempo_prom,
             })
         return resultado
+
+##MENU####
+
+
+def sembrar_datos(hub):
+    r1 = Restaurante(1, "Sazón Criollo", "colombiana", 4.5, "Bloque 12")
+    r2 = Restaurante(2, "Green Bowl", "vegetariana", 4.7, "Bloque 20")
+    hub.agregar_restaurante(r1)
+    hub.agregar_restaurante(r2)
+
+    platos = [
+        Plato(1, "Bandeja paisa", r1, 18000, "colombiana", 950, 20, False, 10, 0),
+        Plato(2, "Ensalada César", r2, 14000, "vegetariana", 350, 8, True, 5, 0),
+        Plato(3, "Wrap de pollo", r1, 12000, "colombiana", 500, 10, True, 2, 30),
+        Plato(4, "Bowl de quinua", r2, 16000, "vegetariana", 420, 12, True, 6, 0),
+        Plato(5, "Arroz con pollo (excedente)", r1, 15000, "colombiana", 600, 15, False, 4, 40),
+        Plato(6, "Jugo natural", r2, 6000, "vegetariana", 120, 5, True, 8, 20),
+    ]
+    for p in platos:
+        hub.agregar_plato(p)
+
+
+def registrar_estudiante(hub, nombre):
+    """Crea un estudiante con presupuesto por defecto y lo agrega al hub."""
+    nuevo = Estudiante(len(hub.obtener_estudiantes()) + 1, nombre, presupuesto=15000)
+    hub.agregar_estudiante(nuevo)
+    return nuevo
+
+
+def elegir_estudiante(hub):
+    print("\n--- Estudiantes registrados ---")
+    for est in hub.obtener_estudiantes():
+        print(f"  [{est.get_id()}] {est.get_nombre()}")
+    print("  [0] Crear nuevo estudiante")
+    opcion = input("Selecciona un estudiante por id: ").strip()
+
+    if opcion == "0":
+        nombre = input("Nombre: ").strip()
+        nuevo = registrar_estudiante(hub, nombre)
+        print(f"Estudiante '{nombre}' creado con id {nuevo.get_id()}.")
+        return nuevo
+
+    for est in hub.obtener_estudiantes():
+        if str(est.get_id()) == opcion:
+            return est
+    print("Id no encontrado, se crea un estudiante temporal por defecto.")
+    return registrar_estudiante(hub, "Invitado")
+
+
+def leer_entero(mensaje):
+    """Lee un entero positivo por consola; devuelve None si no es valido."""
+    valor = input(mensaje).strip()
+    return int(valor) if valor.isdigit() else None
+
+# Menu principal y utilidades de impresion
+
+def mostrar_menu_principal(estudiante):
+    print("\n" + "=" * 60)
+    print(f" CampusFoodHub Inteligente | Usuario: {estudiante.get_nombre()} "
+          f"| Perfil: {estudiante.get_perfil_activo() or 'sin definir'}")
+    print("=" * 60)
+    print(" 1. Ver menu disponible")
+    print(" 2. Buscar / filtrar platos")
+    print(" 3. Limpiar filtros")
+    print(" 4. Elegir perfil predefinido")
+    print(" 5. Ver mis recomendaciones")
+    print(" 6. Ver ofertas de excedentes")
+    print(" 7. Consultar congestion de restaurantes")
+    print(" 8. Obtener combo optimo por presupuesto")
+    print(" 9. Crear preorden")
+    print("10. Ver resumen del campus")
+    print("11. Cambiar de estudiante")
+    print(" 0. Salir")
+
+
+def imprimir_platos(platos):
+    if not platos:
+        print("  (sin resultados)")
+        return
+    for p in platos:
+        etiqueta = " [OFERTA]" if p.es_excedente() else ""
+        print(f"  [{p.get_id()}] {p.get_nombre()} - {p.get_restaurante().get_nombre()} "
+              f"- ${p.precio_final()} - {p.get_tiempo_preparacion()} min{etiqueta}")
+
+
+# Filtros (RF02-RF07): el estado de los filtros vive solo en la consola,
+# no en el modelo del mundo.
+
+def submenu_filtros(filtros):
+    print("\n--- Filtros ---")
+    print(f" Filtros actuales: {filtros}")
+    print(" a. Buscar por texto (RF02)")
+    print(" b. Precio maximo (RF03)")
+    print(" c. Tiempo maximo de preparacion (RF04)")
+    print(" d. Solo saludables (RF05)")
+    print(" e. Solo ofertas de excedente (RF06)")
+    print(" f. Volver")
+    opcion = input("Elige una opcion: ").strip().lower()
+    if opcion == "a":
+        texto = input("Texto a buscar (max 80 caracteres): ").strip()[:80]
+        filtros["texto_busqueda"] = texto or None
+    elif opcion == "b":
+        filtros["precio_maximo"] = leer_entero("Precio maximo en COP: ")
+    elif opcion == "c":
+        filtros["tiempo_maximo"] = leer_entero("Tiempo maximo en minutos: ")
+    elif opcion == "d":
+        filtros["solo_saludable"] = not filtros["solo_saludable"]
+    elif opcion == "e":
+        filtros["solo_excedente"] = not filtros["solo_excedente"]
+
+
+def filtros_por_defecto():
+    """Estado vacio de los filtros de busqueda (RF07)."""
+    return {
+        "texto_busqueda": None, "precio_maximo": None,
+        "tiempo_maximo": None, "solo_saludable": False, "solo_excedente": False,
+    }
+
+
+def limpiar_filtros(filtros):
+    filtros.update(filtros_por_defecto())
+    print("Filtros reiniciados.")
+
+# Perfil, recomendaciones, ofertas, congestion, combo y resumen
+# (RF08-RF11, RF14-RF15)
+
+def submenu_perfil(estudiante):
+    print("\n--- Perfiles disponibles ---")
+    for slug in Estudiante.PERFILES_PREDEFINIDOS:
+        print(f"  - {slug}")
+    slug = input("Escribe el perfil que deseas activar: ").strip()
+    try:
+        estudiante.aplicar_perfil(slug)
+        print(f"Perfil '{slug}' activado. Tus recomendaciones se recalcularan.")
+    except ValueError as e:
+        print(f"Error: {e}")
+
+
+def mostrar_recomendaciones(hub, estudiante):
+    print(f"\n--- Recomendaciones para {estudiante.get_nombre()} ---")
+    resultados = hub.obtener_recomendaciones(estudiante)
+    if not resultados:
+        print("  No hay recomendaciones disponibles en este momento.")
+    for plato, puntaje, razon in resultados:
+        print(f"  [{plato.get_id()}] {plato.get_nombre()} | matchScore={puntaje} | {razon}")
+
+
+def mostrar_ofertas(hub):
+    print("\n--- Ofertas de excedente (mayor a menor descuento) ---")
+    ofertas = hub.obtener_ofertas()
+    if not ofertas:
+        print("  No hay ofertas activas.")
+    for p in ofertas:
+        print(f"  [{p.get_id()}] {p.get_nombre()} | ${p.get_precio()} -> ${p.precio_final()} "
+              f"(-{p.get_descuento_excedente()}%) | disponibles: {p.get_inventario()}")
+
+
+def mostrar_congestion(hub):
+    print("\n--- Congestion por restaurante ---")
+    for estado in hub.obtener_estado_restaurantes():
+        r = estado["restaurante"]
+        print(f"  {r.get_nombre()}: congestion {estado['congestion']} "
+              f"| tiempo estimado ~{estado['tiempo_estimado_min']} min")
+
+
+def flujo_combo_optimo(hub):
+    presupuesto = leer_entero("\nPresupuesto disponible en COP: ")
+    if presupuesto is None:
+        print("Presupuesto invalido.")
+        return
+    combo, gasto, ahorro = hub.obtener_combo_optimo(presupuesto)
+    print("\n--- Combo optimo ---")
+    if not combo:
+        print("  No se encontro ningun combo dentro del presupuesto.")
+        return
+    for p in combo:
+        print(f"  {p.get_nombre()} - ${p.precio_final()}")
+    print(f"  Gasto total: ${gasto} | Ahorro total: ${ahorro}")
+
+
+def mostrar_resumen(hub):
+    resumen = hub.obtener_resumen_campus()
+    print("\n--- Resumen del campus ---")
+    print(f"  Platos activos: {resumen['platos_activos']}")
+    print(f"  Restaurantes abiertos: {resumen['restaurantes_abiertos']}")
+    print(f"  Ofertas vigentes: {resumen['ofertas_vigentes']}")
+    if resumen["plato_mas_rapido"]:
+        print(f"  Plato mas rapido: {resumen['plato_mas_rapido'].get_nombre()} "
+              f"({resumen['plato_mas_rapido'].get_tiempo_preparacion()} min)")
+    else:
+        print("  No hay platos activos en este momento.")
+
+
+# Preorden y comprobante (RF12-RF13)
+
+def mostrar_comprobante(pedido):
+    """RF13: funcion de consola que arma el comprobante a partir de Pedido."""
+    print("\n" + "-" * 40)
+    print("        COMPROBANTE DE PREORDEN")
+    print("-" * 40)
+    print(f" Pedido N.:     {pedido.get_id()}")
+    print(f" Cliente:       {pedido.get_estudiante().get_nombre()}")
+    restaurante = pedido.get_items()[0].get_plato().get_restaurante()
+    print(f" Restaurante:   {restaurante.get_nombre()}")
+    print(f" Hora recogida: {pedido.get_hora_recogida()}")
+    print(" Platos:")
+    for item in pedido.get_items():
+        print(f"   - {item.get_cantidad()}x {item.get_plato().get_nombre()} = ${item.subtotal()}")
+    if pedido.get_notas():
+        print(f" Notas:         {pedido.get_notas()}")
+    print(f" TOTAL:         ${pedido.total()}")
+    print("-" * 40)
+
+
+def flujo_crear_preorden(hub, estudiante):
+    print("\n--- Crear preorden ---")
+    print("Menu disponible:")
+    imprimir_platos(hub.obtener_menu_disponible())
+
+    items = []
+    while True:
+        id_plato = input("Id del plato a agregar (enter para terminar): ").strip()
+        if id_plato == "":
+            break
+        if not id_plato.isdigit():
+            print("Id invalido.")
+            continue
+        cantidad = leer_entero("Cantidad (1-5): ")
+        if cantidad is None:
+            print("Cantidad invalida.")
+            continue
+        items.append((int(id_plato), cantidad))
+
+    if not items:
+        print("No se agrego ningun plato, se cancela la preorden.")
+        return
+
+    hora_recogida = input("Hora de recogida (ej. 12:30): ").strip()
+    notas = input("Notas (opcional): ").strip()
+
+    try:
+        pedido = hub.crear_preorden(estudiante, items, hora_recogida, notas)
+        print(f"\nPreorden #{pedido.get_id()} creada con exito.")
+        mostrar_comprobante(pedido)
+    except ValueError as e:
+        print(f"No se pudo crear la preorden: {e}")
+
+
+# Bucle principal
+def iniciar_consola():
+    hub = CampusFoodHub()
+    sembrar_datos(hub)
+    estudiante = elegir_estudiante(hub)
+    filtros = filtros_por_defecto()
+
+    while True:
+        mostrar_menu_principal(estudiante)
+        opcion = input("Elige una opcion: ").strip()
+
+        if opcion == "1":
+            print("\n--- Menu disponible ---")
+            imprimir_platos(hub.obtener_menu_disponible())
+        elif opcion == "2":
+            submenu_filtros(filtros)
+            print("\n--- Resultado de la busqueda ---")
+            imprimir_platos(hub.filtrar_menu(**filtros))
+        elif opcion == "3":
+            limpiar_filtros(filtros)
+        elif opcion == "4":
+            submenu_perfil(estudiante)
+        elif opcion == "5":
+            mostrar_recomendaciones(hub, estudiante)
+        elif opcion == "6":
+            mostrar_ofertas(hub)
+        elif opcion == "7":
+            mostrar_congestion(hub)
+        elif opcion == "8":
+            flujo_combo_optimo(hub)
+        elif opcion == "9":
+            flujo_crear_preorden(hub, estudiante)
+        elif opcion == "10":
+            mostrar_resumen(hub)
+        elif opcion == "11":
+            estudiante = elegir_estudiante(hub)
+        elif opcion == "0":
+            print("Hasta luego!")
+            break
+        else:
+            print("Opcion no valida.")
+
+
+if __name__ == "__main__":
+    iniciar_consola()
