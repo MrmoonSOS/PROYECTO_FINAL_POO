@@ -83,11 +83,7 @@ class ManejadorHTTP(SimpleHTTPRequestHandler):
                 return texto
 
         def a_booleano(texto):
-            if texto is None or texto.lower() == "false":
-                return False
-            if texto.lower() == "true":
-                return True
-            return texto
+            return texto is not None and texto.lower() == "true"
 
         platos = self.hub.filtrar_menu(
             texto_busqueda=valor("texto"),

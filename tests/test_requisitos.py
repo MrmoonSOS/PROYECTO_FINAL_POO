@@ -83,9 +83,10 @@ class PruebaRF2FiltrarMenu(unittest.TestCase):
     def test_sin_coincidencias_devuelve_lista_vacia(self):
         self.assertEqual(self.hub.filtrar_menu(texto_busqueda="sushi"), [])
 
-    def test_casilla_que_no_es_booleana_es_invalida(self):
-        with self.assertRaises(ValidacionError):
-            self.hub.filtrar_menu(solo_saludable="si")
+    def test_casillas_desmarcadas_no_filtran(self):
+        completo = [1, 2, 3, 4, 5, 6]
+        self.assertEqual(ids(self.hub.filtrar_menu(solo_saludable=False, solo_excedente=False)), completo)
+        self.assertEqual(ids(self.hub.filtrar_menu(solo_saludable=None, solo_excedente=None)), completo)
 
 
 class PruebaRF3SeleccionarPerfil(unittest.TestCase):

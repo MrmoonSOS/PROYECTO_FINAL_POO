@@ -61,9 +61,6 @@ class CampusFoodHub:
         for nombre, valor in (("precio máximo", precio_maximo), ("tiempo máximo", tiempo_maximo)):
             if valor is not None and (isinstance(valor, bool) or not isinstance(valor, int) or valor <= 0):
                 raise ValidacionError(f"El {nombre} debe ser un número entero positivo.")
-        for nombre, valor in (("solo saludables", solo_saludable), ("solo ofertas", solo_excedente)):
-            if not isinstance(valor, bool):
-                raise ValidacionError(f"El criterio '{nombre}' debe ser verdadero o falso.")
 
         resultado = self.obtener_menu_disponible()
         if texto:

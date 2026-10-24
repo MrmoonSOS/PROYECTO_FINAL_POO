@@ -81,11 +81,22 @@ class PruebaManejadorHTTP(unittest.TestCase):
 
     def test_menu_criterio_invalido(self):
         for consulta in ("precio_maximo=abc", "precio_maximo=0", "tiempo_maximo=-3",
-                         "texto=" + "x" * 81, "solo_saludable=quizas"):
+                         "texto=" + "x" * 81):
             with self.subTest(consulta=consulta):
                 codigo, cuerpo = self.solicitar("/api/menu?" + consulta)
                 self.assertEqual(codigo, 400)
                 self.assertIn("error", cuerpo)
+
+    def test_menu_casilla_saludable(self):
+        codigo, platos = self.solicitar("/api/menu?solo_saludable=true")
+        self.assertEqual(codigo, 200)
+        self.assertEqual([p["id"] for p in platos], [2, 3, 4, 6, 9, 11])
+        self.assertTrue(all(p["saludable"] for p in platos))
+        for valor in ("abc", "false", "TRUE1"):
+            with self.subTest(valor=valor):
+                codigo, platos = self.solicitar("/api/menu?solo_saludable=" + valor)
+                self.assertEqual(codigo, 200)
+                self.assertEqual(len(platos), 12)
 
     def test_perfil(self):
         codigo, cuerpo = self.solicitar("/api/perfil", {"slug": "vegetariano"})
