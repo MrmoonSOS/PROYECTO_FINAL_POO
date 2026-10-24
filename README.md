@@ -2,7 +2,7 @@
 
 Sistema que centraliza el menú de los restaurantes de un campus universitario. Permite filtrar platos, elegir un perfil de usuario, recibir recomendaciones personalizadas, consultar ofertas de excedentes, conocer la congestión estimada de cada restaurante, obtener el combo óptimo de ofertas para un presupuesto y crear preórdenes con su comprobante.
 
-Proyecto final de Programación Orientada a Objetos. Esta fase contiene el backend en Python y una API HTTP/JSON que consumirá la interfaz web.
+Proyecto final de Programación Orientada a Objetos. Contiene el backend en Python, que expone una API HTTP/JSON, y la interfaz web que la consume.
 
 ## Requisitos
 
@@ -17,7 +17,7 @@ Desde la raíz del repositorio:
 python main.py
 ```
 
-El servidor queda disponible en `http://127.0.0.1:8000`. Las rutas que empiezan por `/api/` forman la API; las demás se sirven como archivos estáticos desde la carpeta `frontend/`. Si esa carpeta todavía no existe, esas rutas responden 404 y el servidor funciona igual. Para detenerlo, use `Ctrl+C`.
+La interfaz web queda disponible en `http://127.0.0.1:8000` (ábrala en el navegador). Las rutas que empiezan por `/api/` forman la API; las demás se sirven como archivos estáticos desde la carpeta `frontend/`. Para detener el servidor, use `Ctrl+C`.
 
 Los datos se cargan en memoria al arrancar (4 restaurantes y 12 platos), y la sesión tiene un único estudiante, "Simón Valencia", sin perfil activo hasta que se elija uno. Al reiniciar el servidor, el estado vuelve al inicial.
 
@@ -45,6 +45,12 @@ python -m unittest discover -s tests
 | `backend/controlador/manejador_http.py` | Controlador | `ManejadorHTTP` |
 | `backend/datos/datos_iniciales.py` | Datos iniciales | `sembrar_datos(hub)` |
 | `tests/` | Pruebas | Pruebas `unittest` por requisito, por excepción y de la API HTTP |
+| `frontend/index.html` | Interfaz web | Estructura de la página |
+| `frontend/css/estilos.css` | Interfaz web | Estilos de la página |
+| `frontend/js/main.js` | Interfaz web | Punto de entrada: crea `PaginaPrincipal` y llama `iniciar()` |
+| `frontend/js/api.js` | Interfaz web | Cliente HTTP: única capa que llama a la API |
+| `frontend/js/presentacion.js` | Interfaz web | Escape de HTML, formato de moneda y plantilla de tarjeta de plato |
+| `frontend/js/componentes/` | Interfaz web | Una clase por archivo: `PaginaPrincipal`, `PanelFiltros`, `ListaMenu`, `SelectorPerfil`, `SeccionRecomendaciones`, `SeccionOfertas`, `ResumenCampus`, `PanelCongestion`, `FormularioPreorden`, `ModalComprobante`, `FormularioCombo` |
 
 ## Contrato JSON de la API
 
