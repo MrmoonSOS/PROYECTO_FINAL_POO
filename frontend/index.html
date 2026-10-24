@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusFoodHub Inteligente · Universidad de Medellín</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+
+  <nav class="top-nav">
+    <div class="top-nav-inner">
+      <div class="nav-brand">
+        <div class="nav-brand-icon">CF</div>
+        <span>CampusFoodHub Inteligente</span>
+      </div>
+      <div class="nav-links">
+        <a href="#menu">Menú</a>
+        <a href="#ofertas">Ofertas</a>
+        <a href="#recomendaciones">Para ti</a>
+        <a href="#congestion">Congestión</a>
+        <a href="#combo">Combo</a>
+        <a href="#preorden">Preordenar</a>
+      </div>
+      <a href="#preorden" class="nav-cta">Hacer un pedido</a>
+    </div>
+  </nav>
+
+  <div id="avisoGlobal" class="aviso-global" role="alert" hidden>
+    <span id="avisoGlobalTexto"></span>
+    <button id="avisoGlobalCerrar" type="button" class="aviso-global-cerrar" aria-label="Cerrar aviso">Cerrar</button>
+  </div>
+
+  <div class="page-shell">
+
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Universidad de Medellín · Plataforma estudiantil</p>
+        <h1>Comer mejor entre clases, sin filas ni demoras.</h1>
+        <p class="hero-text">
+          Compara precios, tiempos y opciones saludables en todos los restaurantes del campus.
+          Recibe recomendaciones según tu perfil y aprovecha ofertas de excedentes para reducir el desperdicio.
+        </p>
+        <div class="hero-stats" id="summaryCards"></div>
+      </div>
+
+      <aside class="hero-panel">
+        <p class="eyebrow">Personalización</p>
+        <h2>Tu perfil de recomendación</h2>
+        <select id="profileSelect" aria-label="Selecciona un perfil">
+          <option value="" selected disabled>Selecciona un perfil</option>
+          <option value="balance">Balance</option>
+          <option value="fit_rapido">Fit rápido</option>
+          <option value="ahorro_total">Ahorro total</option>
+          <option value="antojo_del_dia">Antojo del día</option>
+          <option value="vegetariano">Vegetariano</option>
+        </select>
+        <p id="profileHint" class="muted profile-hint"></p>
+        <div class="highlight-card">
+          <span class="pill pill-warm">Preorden activa</span>
+          <p>Reserva tu comida y recógela sin hacer fila. Ideal para ventanas cortas entre clases.</p>
+        </div>
+      </aside>
+    </header>
+
+    <section class="section" id="filtros">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Filtros</p>
+          <h2>Encuentra algo que sí te sirva hoy</h2>
+        </div>
+        <button id="clearFilters" class="clear-filters" type="button">Limpiar filtros</button>
+      </div>
+
+      <div class="filters-info">
+        <span>Los filtros se aplican <strong>automáticamente</strong> al escribir o marcar. No necesitas botón de buscar.</span>
+      </div>
+
+      <div class="filters-grid">
+        <label>
+          <span>Buscar plato, restaurante o categoría</span>
+          <input id="searchInput" type="search" placeholder="Ej. bowl, arroz, vegetariana">
+        </label>
+        <label>
+          <span>Precio máximo (COP)</span>
+          <input id="priceInput" type="text" inputmode="numeric" placeholder="18000">
+        </label>
+        <label>
+          <span>Tiempo máximo (min)</span>
+          <input id="timeInput" type="text" inputmode="numeric" placeholder="10">
+        </label>
+        <label class="switch">
+          <input id="healthyInput" type="checkbox">
+          <span>Solo saludables</span>
+        </label>
+        <label class="switch">
+          <input id="surplusInput" type="checkbox">
+          <span>Solo ofertas</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="section" id="recomendaciones">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Recomendaciones</p>
+          <h2>Lo mejor para tu perfil</h2>
+        </div>
+        <p class="section-count">Personalizado según tu perfil</p>
+      </div>
+      <div id="recommendations" class="cards-grid"></div>
+    </section>
+
+    <section class="section" id="ofertas">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Anti-desperdicio</p>
+          <h2>Ofertas de excedentes</h2>
+        </div>
+        <p class="section-count">Ordenadas de mayor a menor descuento</p>
+      </div>
+
+      <div class="offers-banner">
+        <div class="offers-banner-text">
+          <strong>Combatamos el desperdicio juntos</strong>
+          <span>Aprovecha estos descuentos antes de que se agoten y ayuda a reducir el desperdicio de comida del campus.</span>
+        </div>
+      </div>
+
+      <div id="offers" class="offers-strip"></div>
+    </section>
+
+    <section class="section" id="menu">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Todo el menú</p>
+          <h2>Disponible ahora</h2>
+        </div>
+        <p id="menuCount" class="section-count"></p>
+      </div>
+      <div id="menuGrid" class="cards-grid"></div>
+    </section>
+
+    <section class="section" id="congestion">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Congestión</p>
+          <h2>Tiempo de espera estimado</h2>
+        </div>
+        <p class="section-count">Restaurantes abiertos del campus</p>
+      </div>
+      <div id="congestionGrid" class="congestion-grid"></div>
+    </section>
+
+    <section class="section" id="combo">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Optimizador de combos</p>
+          <h2>El mejor combo de ofertas para tu presupuesto</h2>
+        </div>
+        <p class="section-count">Mayor ahorro sin superar tu presupuesto</p>
+      </div>
+
+      <form id="comboForm" class="combo-form" novalidate>
+        <label>
+          <span>Tu presupuesto (COP)</span>
+          <input id="comboBudget" type="text" inputmode="numeric" placeholder="20000">
+        </label>
+        <button type="submit">Optimizar combo</button>
+        <p id="comboMessage" class="form-message"></p>
+      </form>
+      <div id="comboResult" class="combo-result"></div>
+    </section>
+
+    <section class="section" id="preorden">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Preorden</p>
+          <h2>Reserva en segundos</h2>
+        </div>
+        <p class="section-count">Recoge sin hacer fila</p>
+      </div>
+
+      <form id="preorderForm" class="preorder-form" novalidate>
+        <div class="field-full item-picker">
+          <label>
+            <span>Plato a preordenar</span>
+            <select id="menuItemSelect">
+              <option value="">Selecciona un plato...</option>
+            </select>
+          </label>
+          <label>
+            <span>Cantidad</span>
+            <input id="quantity" type="text" inputmode="numeric" value="1">
+          </label>
+          <button id="addItem" type="button" class="add-item">Agregar plato</button>
+        </div>
+        <div class="field-full">
+          <span class="items-title">Platos seleccionados</span>
+          <ul id="selectedItems" class="selected-items"></ul>
+        </div>
+        <label>
+          <span>Tu nombre completo</span>
+          <input id="customerName" placeholder="Ej. Juan Pérez">
+        </label>
+        <label>
+          <span>Hora de recogida</span>
+          <input id="pickupTime" type="time">
+        </label>
+        <label class="field-full">
+          <span>Notas para el restaurante</span>
+          <input id="notes" placeholder="Sin cebolla, extra salsa, etc.">
+        </label>
+        <button type="submit" class="submit-preorder">Confirmar preorden</button>
+        <p id="preorderMessage" class="form-message"></p>
+      </form>
+    </section>
+
+    <footer class="footer">
+      <p>
+        <strong>CampusFoodHub Inteligente</strong><br>
+        Proyecto final de Programación Orientada a Objetos · Universidad de Medellín · 2026
+      </p>
+    </footer>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
+      <div class="modal-icon">✓</div>
+      <h3 id="modalTitulo">Preorden confirmada</h3>
+      <p class="modal-subtitle">Presenta este comprobante al recoger tu pedido</p>
+      <div class="modal-details" id="modalDetails"></div>
+      <button class="modal-close" id="modalClose" type="button">Entendido</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
